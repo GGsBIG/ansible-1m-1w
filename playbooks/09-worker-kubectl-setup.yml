@@ -1,0 +1,142 @@
+---
+- name: Setup kubectl on Worker Nodes
+  hosts: workers
+  become: no
+  tasks:
+    - name: Install sshpass package
+      apt:
+        name: sshpass
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: Create .kube directory for user
+      file:
+        path: "/home/{{ ansible_user }}/.kube"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Copy admin.conf to user accessible location on master node
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /tmp/admin.conf
+        remote_src: yes
+        mode: '0644'
+      delegate_to: "{{ groups['masters'][0] }}"
+      become: yes
+
+    - name: Copy kubeconfig from master to worker node
+      shell: sshpass -p '{{ hostvars[groups["masters"][0]]["ansible_ssh_pass"] }}' scp -o StrictHostKeyChecking=no {{ hostvars[groups["masters"][0]]["ansible_user"] }}@{{ groups["masters"][0] }}:/tmp/admin.conf /home/{{ ansible_user }}/.kube/config
+      become_user: "{{ ansible_user }}"
+
+    - name: Clean up temporary file on master node
+      file:
+        path: /tmp/admin.conf
+        state: absent
+      delegate_to: "{{ groups['masters'][0] }}"
+      become: yes
+
+    - name: Set correct ownership for kubeconfig
+      file:
+        path: "/home/{{ ansible_user }}/.kube/config"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+
+    - name: Create .kube directory for root
+      file:
+        path: /root/.kube
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Copy kubeconfig to root user
+      copy:
+        src: "/home/{{ ansible_user }}/.kube/config"
+        dest: /root/.kube/config
+        remote_src: yes
+        mode: '0644'
+      become: yes
+
+    - name: Install bash-completion package
+      apt:
+        name: bash-completion
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: Check if kubectl completion is already configured for user
+      shell: grep -q "kubectl completion bash" /home/{{ ansible_user }}/.bashrc
+      register: kubectl_completion_check
+      failed_when: false
+      changed_when: false
+
+    - name: Setup kubectl bash completion for user
+      shell: echo 'source <(kubectl completion bash)' >> /home/{{ ansible_user }}/.bashrc
+      when: kubectl_completion_check.rc != 0
+
+    - name: Check if kubectl alias is already configured for user
+      shell: grep -q "alias k=kubectl" /home/{{ ansible_user }}/.bashrc
+      register: kubectl_alias_check
+      failed_when: false
+      changed_when: false
+
+    - name: Setup kubectl alias for user
+      shell: |
+        echo 'alias k=kubectl' >> /home/{{ ansible_user }}/.bashrc
+        echo 'complete -o default -F __start_kubectl k' >> /home/{{ ansible_user }}/.bashrc
+      when: kubectl_alias_check.rc != 0
+
+    - name: Check if kubectl completion is already configured for root
+      shell: grep -q "kubectl completion bash" /root/.bashrc
+      register: root_kubectl_completion_check
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Setup kubectl bash completion for root
+      shell: echo 'source <(kubectl completion bash)' >> /root/.bashrc
+      when: root_kubectl_completion_check.rc != 0
+      become: yes
+
+    - name: Check if kubectl alias is already configured for root
+      shell: grep -q "alias k=kubectl" /root/.bashrc
+      register: root_kubectl_alias_check
+      failed_when: false
+      changed_when: false
+      become: yes
+
+    - name: Setup kubectl alias for root
+      shell: |
+        echo 'alias k=kubectl' >> /root/.bashrc
+        echo 'complete -o default -F __start_kubectl k' >> /root/.bashrc
+      when: root_kubectl_alias_check.rc != 0
+      become: yes
+
+    - name: Test kubectl connectivity
+      shell: kubectl get nodes
+      register: kubectl_test_result
+      become_user: "{{ ansible_user }}"
+
+    - name: Display kubectl setup result
+      debug:
+        msg: |
+          ✅ kubectl setup on Worker Node completed!
+          
+          Features enabled:
+          - kubectl configuration copied from master node
+          - kubeconfig available for both {{ ansible_user }} and root users
+          - Tab completion for kubectl commands
+          - kubectl alias 'k' with completion support
+          
+          kubectl test result:
+          {{ kubectl_test_result.stdout_lines | join('\n') }}
+          
+          Usage examples:
+          - kubectl get nodes
+          - kubectl get pods -A
+          - k get nodes (using alias)
+          
+          Note: You may need to start a new shell session or run 'source ~/.bashrc' to activate the completion. 

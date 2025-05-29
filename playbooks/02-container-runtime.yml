@@ -1,0 +1,115 @@
+---
+- name: Install Container Runtime
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+
+    - name: Install ca-certificates and curl
+      apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+
+    - name: Create /etc/apt/keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Docker GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Set read permissions for Docker GPG key
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: 'a+r'
+
+    - name: Get architecture
+      command: dpkg --print-architecture
+      register: arch_result
+      changed_when: false
+
+    - name: Get Ubuntu version codename
+      shell: . /etc/os-release && echo "$VERSION_CODENAME"
+      register: version_codename
+      changed_when: false
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch={{ arch_result.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ version_codename.stdout }} stable"
+        filename: docker
+        state: present
+
+    - name: Update package cache after adding repository
+      apt:
+        update_cache: yes
+
+    - name: Install containerd.io
+      apt:
+        name: containerd.io
+        state: present
+
+    - name: Enable containerd service
+      systemd:
+        name: containerd
+        enabled: yes
+
+    - name: Check containerd status
+      systemd:
+        name: containerd
+        state: started
+
+    - name: Download crictl
+      get_url:
+        url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.30.0/crictl-v1.30.0-linux-amd64.tar.gz"
+        dest: "/tmp/crictl-v1.30.0-linux-amd64.tar.gz"
+
+    - name: Extract crictl to /usr/local/bin
+      unarchive:
+        src: "/tmp/crictl-v1.30.0-linux-amd64.tar.gz"
+        dest: /usr/local/bin
+        remote_src: yes
+
+    - name: Remove crictl archive
+      file:
+        path: "/tmp/crictl-v1.30.0-linux-amd64.tar.gz"
+        state: absent
+
+    - name: Configure crictl runtime endpoint
+      command: crictl config runtime-endpoint unix:///var/run/containerd/containerd.sock
+
+    - name: Create containerd config directory
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Generate default containerd config
+      shell: containerd config default > /etc/containerd/config.toml
+
+    - name: Set SystemdCgroup to true in containerd config
+      lineinfile:
+        path: /etc/containerd/config.toml
+        regexp: '^\s*SystemdCgroup\s*='
+        line: '            SystemdCgroup = true'
+        backup: yes
+
+    - name: Restart containerd service
+      systemd:
+        name: containerd
+        state: restarted
+
+    - name: Verify SystemdCgroup setting
+      shell: containerd config dump | grep SystemdCgroup
+      register: systemd_cgroup_check
+      changed_when: false
+
+    - name: Display SystemdCgroup verification
+      debug:
+        msg: "SystemdCgroup setting: {{ systemd_cgroup_check.stdout }}" 

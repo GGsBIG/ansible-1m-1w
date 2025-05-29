@@ -1,0 +1,85 @@
+---
+- name: Install Calico CNI Plugin
+  hosts: masters
+  become: no
+  tasks:
+    - name: Deploy Tigera Operator
+      shell: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml
+      register: tigera_result
+      become_user: "{{ ansible_user }}"
+
+    - name: Display Tigera Operator deployment result
+      debug:
+        msg: "{{ tigera_result.stdout_lines }}"
+
+    - name: Download custom-resources.yaml
+      get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/custom-resources.yaml
+        dest: /tmp/custom-resources.yaml
+        mode: '0644'
+
+    - name: Modify custom-resources.yaml to set CIDR to 10.244.0.0/16
+      replace:
+        path: /tmp/custom-resources.yaml
+        regexp: 'cidr: 192\.168\.0\.0/16'
+        replace: 'cidr: 10.244.0.0/16'
+
+    - name: Display modified custom-resources.yaml content
+      shell: cat /tmp/custom-resources.yaml
+      register: custom_resources_content
+
+    - name: Show custom-resources.yaml content
+      debug:
+        msg: "{{ custom_resources_content.stdout_lines }}"
+
+    - name: Apply custom-resources.yaml to deploy Calico
+      shell: kubectl apply -f /tmp/custom-resources.yaml
+      register: calico_deploy_result
+      become_user: "{{ ansible_user }}"
+
+    - name: Display Calico deployment result
+      debug:
+        msg: "{{ calico_deploy_result.stdout_lines }}"
+
+    - name: Wait for Calico pods to be ready (this may take a few minutes)
+      shell: kubectl get pods -n calico-system --no-headers | grep -v Running | wc -l
+      register: pending_pods
+      until: pending_pods.stdout | int == 0
+      retries: 30
+      delay: 10
+      become_user: "{{ ansible_user }}"
+
+    - name: Get Calico system pods status
+      shell: kubectl get pods -n calico-system
+      register: calico_pods_status
+      become_user: "{{ ansible_user }}"
+
+    - name: Display Calico pods status
+      debug:
+        msg: |
+          Calico system pods status:
+          {{ calico_pods_status.stdout_lines | join('\n') }}
+
+    - name: Wait for nodes to become Ready
+      shell: kubectl get nodes --no-headers | grep NotReady | wc -l
+      register: not_ready_nodes
+      until: not_ready_nodes.stdout | int == 0
+      retries: 20
+      delay: 15
+      become_user: "{{ ansible_user }}"
+
+    - name: Get final cluster nodes status
+      shell: kubectl get nodes -o wide
+      register: final_nodes_status
+      become_user: "{{ ansible_user }}"
+
+    - name: Display final cluster status
+      debug:
+        msg: |
+          🎉 Kubernetes cluster is ready!
+          
+          Final cluster nodes status:
+          {{ final_nodes_status.stdout_lines | join('\n') }}
+          
+          All nodes should now show as 'Ready' status.
+          Your Kubernetes cluster is fully operational! 

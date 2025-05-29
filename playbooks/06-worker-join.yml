@@ -1,0 +1,42 @@
+---
+- name: Get join command from master node
+  hosts: masters
+  become: yes
+  tasks:
+    - name: Read join command from file
+      slurp:
+        src: /tmp/kubeadm_join_command.sh
+      register: join_command_file
+
+    - name: Set join command as fact
+      set_fact:
+        join_command: "{{ join_command_file.content | b64decode | trim }}"
+
+- name: Join Worker Nodes to Kubernetes Cluster
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Execute kubeadm join command
+      shell: "{{ hostvars[groups['masters'][0]]['join_command'] }}"
+      register: join_result
+
+    - name: Display join result
+      debug:
+        msg: "{{ join_result.stdout_lines }}"
+
+- name: Verify cluster nodes
+  hosts: masters
+  become: no
+  tasks:
+    - name: Get cluster nodes
+      shell: kubectl get nodes
+      register: nodes_result
+      become_user: "{{ ansible_user }}"
+
+    - name: Display cluster nodes
+      debug:
+        msg: |
+          Cluster nodes status:
+          {{ nodes_result.stdout_lines | join('\n') }}
+          
+          Note: Nodes may show as 'NotReady' until Pod network is installed. 

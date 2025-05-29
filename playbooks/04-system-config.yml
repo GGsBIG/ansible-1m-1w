@@ -1,0 +1,69 @@
+---
+- name: System Configuration for Kubernetes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Disable swap immediately
+      command: swapoff -a
+
+    - name: Comment out swap entries in /etc/fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*\s+swap\s+.*)$'
+        replace: '# \1'
+        backup: yes
+
+    - name: Load overlay module
+      modprobe:
+        name: overlay
+        state: present
+
+    - name: Load br_netfilter module
+      modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Create containerd modules configuration
+      copy:
+        content: |
+          overlay
+          br_netfilter
+        dest: /etc/modules-load.d/containerd.conf
+
+    - name: Create kubernetes sysctl configuration
+      copy:
+        content: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+          net.ipv4.ip_forward = 1
+        dest: /etc/sysctl.d/kubernetes.conf
+
+    - name: Apply sysctl settings
+      command: sysctl --system
+
+    - name: Verify br_netfilter module is loaded
+      shell: lsmod | grep br_netfilter
+      register: br_netfilter_check
+      changed_when: false
+
+    - name: Display br_netfilter module status
+      debug:
+        msg: "br_netfilter module: {{ br_netfilter_check.stdout }}"
+
+    - name: Verify overlay module is loaded
+      shell: lsmod | grep overlay
+      register: overlay_check
+      changed_when: false
+
+    - name: Display overlay module status
+      debug:
+        msg: "overlay module: {{ overlay_check.stdout }}"
+
+    - name: Verify sysctl settings
+      shell: sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
+      register: sysctl_check
+      changed_when: false
+
+    - name: Display sysctl settings
+      debug:
+        msg: "{{ sysctl_check.stdout_lines }}" 

@@ -1,0 +1,83 @@
+---
+- name: SSH Bridge Setup
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+
+    - name: Install openssh-server and openssh-client
+      apt:
+        name:
+          - openssh-server
+          - openssh-client
+        state: present
+
+    - name: Start SSH service
+      systemd:
+        name: ssh
+        state: started
+
+    - name: Enable SSH service on boot
+      systemd:
+        name: ssh
+        enabled: yes
+
+    - name: Generate SSH key
+      user:
+        name: "{{ ansible_user }}"
+        generate_ssh_key: yes
+        ssh_key_type: rsa
+        ssh_key_bits: 2048
+
+    - name: Set PermitRootLogin to yes
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        backup: yes
+
+    - name: Set hostname
+      hostname:
+        name: "{{ ansible_host_name }}"
+
+    - name: Update /etc/hosts with new hostname
+      lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ ansible_host_name }}"
+        backup: yes
+
+    - name: Update /etc/hostname
+      copy:
+        content: "{{ ansible_host_name }}\n"
+        dest: /etc/hostname
+        backup: yes
+
+    - name: Restart SSH service
+      systemd:
+        name: ssh
+        state: restarted
+
+    - name: Copy SSH key to user account for passwordless login
+      authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      ignore_errors: yes
+
+    - name: Ensure root .ssh directory exists
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Copy SSH key to root account for passwordless login
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      ignore_errors: yes 

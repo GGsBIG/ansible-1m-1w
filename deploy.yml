@@ -1,0 +1,10 @@
+---
+- import_playbook: playbooks/01-ssh-setup.yml
+- import_playbook: playbooks/02-container-runtime.yml
+- import_playbook: playbooks/03-kubernetes-components.yml
+- import_playbook: playbooks/04-system-config.yml
+- import_playbook: playbooks/05-master-init.yml
+- import_playbook: playbooks/06-worker-join.yml
+- import_playbook: playbooks/07-install-calico.yml
+- import_playbook: playbooks/08-kubectl-completion.yml
+- import_playbook: playbooks/09-worker-kubectl-setup.yml 

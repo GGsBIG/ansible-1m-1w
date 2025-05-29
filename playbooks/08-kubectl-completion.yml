@@ -1,0 +1,74 @@
+---
+- name: Setup kubectl bash completion
+  hosts: masters
+  become: yes
+  tasks:
+    - name: Install bash-completion package
+      apt:
+        name: bash-completion
+        state: present
+        update_cache: yes
+
+    - name: Check if kubectl completion is already configured for user
+      shell: grep -q "kubectl completion bash" /home/{{ ansible_user }}/.bashrc
+      register: kubectl_completion_check
+      failed_when: false
+      changed_when: false
+      become_user: "{{ ansible_user }}"
+
+    - name: Setup kubectl bash completion for user
+      shell: echo 'source <(kubectl completion bash)' >> /home/{{ ansible_user }}/.bashrc
+      when: kubectl_completion_check.rc != 0
+      become_user: "{{ ansible_user }}"
+
+    - name: Check if kubectl alias is already configured for user
+      shell: grep -q "alias k=kubectl" /home/{{ ansible_user }}/.bashrc
+      register: kubectl_alias_check
+      failed_when: false
+      changed_when: false
+      become_user: "{{ ansible_user }}"
+
+    - name: Setup kubectl alias for user
+      shell: |
+        echo 'alias k=kubectl' >> /home/{{ ansible_user }}/.bashrc
+        echo 'complete -o default -F __start_kubectl k' >> /home/{{ ansible_user }}/.bashrc
+      when: kubectl_alias_check.rc != 0
+      become_user: "{{ ansible_user }}"
+
+    - name: Check if kubectl completion is already configured for root
+      shell: grep -q "kubectl completion bash" /root/.bashrc
+      register: root_kubectl_completion_check
+      failed_when: false
+      changed_when: false
+
+    - name: Setup kubectl bash completion for root
+      shell: echo 'source <(kubectl completion bash)' >> /root/.bashrc
+      when: root_kubectl_completion_check.rc != 0
+
+    - name: Check if kubectl alias is already configured for root
+      shell: grep -q "alias k=kubectl" /root/.bashrc
+      register: root_kubectl_alias_check
+      failed_when: false
+      changed_when: false
+
+    - name: Setup kubectl alias for root
+      shell: |
+        echo 'alias k=kubectl' >> /root/.bashrc
+        echo 'complete -o default -F __start_kubectl k' >> /root/.bashrc
+      when: root_kubectl_alias_check.rc != 0
+
+    - name: Display completion setup result
+      debug:
+        msg: |
+          ✅ kubectl bash completion setup completed!
+          
+          Features enabled:
+          - Tab completion for kubectl commands
+          - kubectl alias 'k' with completion support
+          - Available for both {{ ansible_user }} and root users
+          
+          Usage examples:
+          - Type 'kubectl des' + TAB → 'kubectl describe'
+          - Type 'k des' + TAB → 'k describe'
+          
+          Note: You may need to start a new shell session or run 'source ~/.bashrc' to activate the completion. 
