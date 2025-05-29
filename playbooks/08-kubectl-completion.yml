@@ -60,7 +60,7 @@
     - name: Display completion setup result
       debug:
         msg: |
-          ✅ kubectl bash completion setup completed!
+          kubectl bash completion setup completed!
           
           Features enabled:
           - Tab completion for kubectl commands

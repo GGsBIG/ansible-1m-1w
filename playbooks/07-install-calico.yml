@@ -76,7 +76,7 @@
     - name: Display final cluster status
       debug:
         msg: |
-          🎉 Kubernetes cluster is ready!
+          Kubernetes cluster is ready!
           
           Final cluster nodes status:
           {{ final_nodes_status.stdout_lines | join('\n') }}

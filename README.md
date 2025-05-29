@@ -10,7 +10,6 @@ ansible/
 │   ├── setup-kubectl-completion.sh
 │   ├── setup-ssh.sh
 │   ├── setup-worker-kubelet.sh
-├── group_vars/
 ├── playbooks/
 │   ├── 01-ssh-setup.yml
 │   ├── 02-container-runtime.yml
@@ -21,10 +20,9 @@ ansible/
 │   ├── 07-install-calico.yml
 │   ├── 08-kubectl-completion.yml
 │   └── 09-worker-kubectl-setup.yml
-├── templates/
 ├── deploy.yml
 ├── inventory.ini
-└──  README.md
+└── README.md
 ```
 
 ## 系統架構圖

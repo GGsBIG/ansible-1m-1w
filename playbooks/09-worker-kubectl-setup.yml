@@ -123,7 +123,7 @@
     - name: Display kubectl setup result
       debug:
         msg: |
-          ✅ kubectl setup on Worker Node completed!
+          kubectl setup on Worker Node completed!
           
           Features enabled:
           - kubectl configuration copied from master node
