@@ -1,32 +1,32 @@
 #!/bin/bash
 
-# Worker 節點 kubectl 設定腳本
-# 此腳本會在 Worker 節點設定 kubectl 和自動補全
+# Worker Node kubectl Setup Script
+# This script will setup kubectl and auto-completion on worker nodes
 
 set -e
 
 echo "=========================================="
-echo "  設定 Worker 節點 kubectl"
+echo "  Setup Worker Node kubectl"
 echo "=========================================="
 
-# 顏色定義
+# Color definitions
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}執行 Worker kubectl 設定 Playbook...${NC}"
+echo -e "${BLUE}Executing worker kubectl setup playbook...${NC}"
 ansible-playbook -i inventory.ini playbooks/09-worker-kubectl-setup.yml
 
-echo -e "\n${GREEN}✅ Worker 節點 kubectl 設定完成！${NC}"
-echo "• kubeconfig 已從 Master 節點複製"
-echo "• kubectl 已可在 Worker 節點使用"
-echo "• bash-completion 已安裝"
-echo "• kubectl Tab 補全已啟用"
-echo "• kubectl 別名 'k' 已設定"
+echo -e "\n${GREEN}✅ Worker node kubectl setup completed!${NC}"
+echo "• kubeconfig copied from Master node"
+echo "• kubectl available on worker node"
+echo "• bash-completion installed"
+echo "• kubectl Tab completion enabled"
+echo "• kubectl alias 'k' configured"
 
-echo -e "\n${BLUE}測試 Worker 節點 kubectl：${NC}"
+echo -e "\n${BLUE}Test worker node kubectl:${NC}"
 echo "ssh bbg@10.211.55.88"
 echo "kubectl get nodes"
 echo "k get pods -A"
 
-echo -e "\n${BLUE}現在所有節點都可以管理叢集！${NC}" 
+echo -e "\n${BLUE}Now all nodes can manage the cluster!${NC}" 
