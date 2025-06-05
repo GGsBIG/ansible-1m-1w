@@ -43,7 +43,7 @@ echo "Step 4: Set up Docker cert directory..."
 sudo mkdir -p "/etc/docker/certs.d/$HARBOR_HOST"
 
 echo "Step 5: Copy Harbor certificate..."
-if ! scp "root@10.10.7.5:$CERT_REMOTE_PATH" "$CERT_LOCAL"; then
+if ! scp "root@10.6.4.224:$CERT_REMOTE_PATH" "$CERT_LOCAL"; then
   echo "Failed to SCP $CERT_REMOTE_PATH from Harbor server."
   echo "🛠️  Try: sudo chmod 644 $CERT_REMOTE_PATH on Harbor VM"
   exit 1
