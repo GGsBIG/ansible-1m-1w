@@ -1,3 +1,5 @@
+#05-master-init.yml
+
 ---
 - name: Initialize Kubernetes Master Node
   hosts: masters
@@ -7,7 +9,7 @@
       shell: |
         kubeadm init \
           --apiserver-advertise-address {{ ansible_default_ipv4.address }} \
-          --control-plane-endpoint {{ ansible_default_ipv4.address }} \
+          --control-plane-endpoint "k8s-lb.example.com:6443" \
           --pod-network-cidr=10.244.0.0/16
       register: kubeadm_init_result
 

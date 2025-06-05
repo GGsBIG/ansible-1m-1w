@@ -1,3 +1,4 @@
+#run.sh
 #!/bin/bash
 
 set -e  # Stop execution on error

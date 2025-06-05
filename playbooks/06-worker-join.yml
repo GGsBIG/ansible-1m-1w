@@ -1,3 +1,5 @@
+#06-worker-join.yml
+
 ---
 - name: Get join command from master node
   hosts: masters
