@@ -131,24 +131,28 @@ show_step "4" "System Configuration (disable swap, load modules, etc.)"
 ansible-playbook -i inventory.ini playbooks/04-system-config.yml
 show_success "System configuration completed"
 
-show_step "5" "Initialize Master Node"
-ansible-playbook -i inventory.ini playbooks/05-master-init.yml
+show_step "5" "Setup HAProxy Load Balancer"
+ansible-playbook -i inventory.ini playbooks/05-setup-haproxy.yml
+show_success "HAProxy setup completed"
+
+show_step "6" "Initialize Master Node"
+ansible-playbook -i inventory.ini playbooks/06-master-init.yml
 show_success "Master Node initialization completed"
 
-show_step "6" "Worker Node Join Cluster"
-ansible-playbook -i inventory.ini playbooks/06-worker-join.yml
+show_step "7" "Worker Node Join Cluster"
+ansible-playbook -i inventory.ini playbooks/07-worker-join.yml
 show_success "Worker Node joined cluster successfully"
 
-show_step "7" "Install Calico CNI Network Plugin"
-ansible-playbook -i inventory.ini playbooks/07-install-calico.yml
+show_step "8" "Install Calico CNI Network Plugin"
+ansible-playbook -i inventory.ini playbooks/08-install-calico.yml
 show_success "Calico CNI installation completed"
 
-show_step "8" "Setup kubectl Auto-completion and Aliases (Master Node)"
-ansible-playbook -i inventory.ini playbooks/08-kubectl-completion.yml
+show_step "9" "Setup kubectl Auto-completion and Aliases (Master Node)"
+ansible-playbook -i inventory.ini playbooks/09-kubectl-completion.yml
 show_success "kubectl auto-completion setup completed"
 
-show_step "9" "Setup Worker Node kubectl"
-ansible-playbook -i inventory.ini playbooks/09-worker-kubectl-setup.yml
+show_step "10" "Setup Worker Node kubectl"
+ansible-playbook -i inventory.ini playbooks/10-worker-kubectl-setup.yml
 show_success "Worker Node kubectl setup completed"
 
 echo -e "\n${GREEN}=========================================="
@@ -156,6 +160,7 @@ echo -e "  K8s Cluster Deployment Completed!"
 echo -e "==========================================${NC}\n"
 
 echo -e "${BLUE}Cluster Information:${NC}"
+echo "• HAProxy Load Balancer: Configured for HA masters"
 echo "• Master Node: Initialized and configured"
 echo "• Worker Node: Joined cluster"
 echo "• CNI Network: Calico (Pod CIDR: 10.244.0.0/16)"
@@ -165,6 +170,7 @@ echo -e "\n${BLUE}Convenience Features:${NC}"
 echo "• kubectl auto-completion: Tab completion support"
 echo "• kubectl alias: Use 'k' instead of 'kubectl'"
 echo "• All nodes: Can manage cluster using kubectl"
+echo "• HAProxy: High availability for master nodes"
 
 echo -e "\n${BLUE}Check Cluster Status:${NC}"
 echo "ssh $User@$ip  # Login to Master Node"
