@@ -7,7 +7,7 @@
       shell: |
         kubeadm init \
           --apiserver-advertise-address {{ ansible_default_ipv4.address }} \
-          --control-plane-endpoint "k8s-lb.example.com:6443" \
+          --control-plane-endpoint "k8s-lb.example.com:8443" \
           --upload-certs \
           --pod-network-cidr=10.244.0.0/16
       register: kubeadm_init_result
@@ -16,7 +16,7 @@
       debug:
         msg: "{{ kubeadm_init_result.stdout_lines }}"
 
-    - name: Extract join command from kubeadm init output
+    - name: Extract join command from output
       shell: echo "{{ kubeadm_init_result.stdout }}" | grep -A 2 "kubeadm join"
       register: join_command_raw
       changed_when: false

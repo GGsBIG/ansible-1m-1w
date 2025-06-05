@@ -1,6 +1,6 @@
 ---
 - name: Configure HAProxy as Kubernetes API Load Balancer
-  hosts: haproxy
+  hosts: masters[0]
   become: yes
   tasks:
     - name: Install haproxy
@@ -9,12 +9,25 @@
         state: present
         update_cache: yes
 
-    - name: Deploy HAProxy config
+    - name: Deploy HAProxy config to /etc/haproxy/haproxy.cfg
       copy:
         dest: /etc/haproxy/haproxy.cfg
         content: |
+          global
+              log /dev/log local0
+              maxconn 2048
+              daemon
+
+          defaults
+              log     global
+              mode    tcp
+              option  tcplog
+              timeout connect 10s
+              timeout client  30s
+              timeout server  30s
+
           frontend k8s-api
-              bind *:6443
+              bind *:8443
               default_backend k8s-masters
 
           backend k8s-masters
@@ -26,8 +39,8 @@
               server master3 10.10.7.4:6443 check
         mode: '0644'
 
-    - name: Enable and restart HAProxy
+    - name: Restart and enable HAProxy
       service:
         name: haproxy
-        enabled: yes
         state: restarted
+        enabled: yes
