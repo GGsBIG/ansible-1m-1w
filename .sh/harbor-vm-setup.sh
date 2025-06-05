@@ -95,6 +95,6 @@ echo "Step 7: Install Harbor..."
 sudo ./install.sh
 
 echo
-echo "✅ Harbor 安裝完成！"
-echo "🌐 請訪問: https://tungbro.harbor.com"
-echo "🔐 登入帳號: admin / Harbor12345"
+echo "Harbor 安裝完成！"
+echo "請訪問: https://tungbro.harbor.com"
+echo "登入帳號: admin / Harbor12345"

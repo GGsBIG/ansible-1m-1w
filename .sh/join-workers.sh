@@ -18,10 +18,10 @@ NC='\033[0m'
 echo -e "${BLUE}Executing worker node join playbook...${NC}"
 ansible-playbook -i inventory.ini playbooks/06-worker-join.yml
 
-echo -e "\n${GREEN}✅ Worker node join completed!${NC}"
+echo -e "\n${GREEN}Worker node join completed!${NC}"
 echo -e "${YELLOW}Note: Nodes may show as NotReady, this is normal.${NC}"
 echo "CNI network plugin needs to be installed for nodes to become Ready."
 
 echo -e "\n${BLUE}Check node status:${NC}"
-echo "ssh bbg@10.211.55.87"
+echo "ssh bbg@10.6.4.213"
 echo "kubectl get nodes" 

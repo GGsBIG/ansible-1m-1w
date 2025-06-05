@@ -18,17 +18,17 @@ NC='\033[0m' # No Color
 
 # Function: Display success message
 show_success() {
-    echo -e "\n${GREEN}✅ $1${NC}\n"
+    echo -e "\n${GREEN}$1${NC}\n"
 }
 
 # Function: Display warning message
 show_warning() {
-    echo -e "\n${YELLOW}⚠️  $1${NC}\n"
+    echo -e "\n${YELLOW}$1${NC}\n"
 }
 
 # Function: Display error message
 show_error() {
-    echo -e "\n${RED}❌ $1${NC}\n"
+    echo -e "\n${RED}$1${NC}\n"
 }
 
 # Function: Install Ansible for Ubuntu 22.04
@@ -62,7 +62,7 @@ if ! command -v ansible-playbook &> /dev/null; then
     show_warning "Ansible not installed, installing automatically..."
     install_ansible
 else
-    echo -e "${GREEN}✅ Ansible is already installed${NC}"
+    echo -e "${GREEN}Ansible is already installed${NC}"
     echo -e "${BLUE}Ansible version:${NC}"
     ansible --version | head -1
 fi
@@ -70,7 +70,7 @@ fi
 echo -e "${BLUE}Executing SSH setup playbook...${NC}"
 ansible-playbook -i inventory.ini playbooks/01-ssh-setup.yml
 
-echo -e "\n${GREEN}✅ SSH setup completed!${NC}"
+echo -e "\n${GREEN}SSH setup completed!${NC}"
 echo "• SSH service enabled"
 echo "• Hostname configured"
 echo "• Passwordless login configured"

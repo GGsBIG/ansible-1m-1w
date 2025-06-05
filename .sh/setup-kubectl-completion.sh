@@ -17,7 +17,7 @@ NC='\033[0m'
 echo -e "${BLUE}Executing kubectl completion setup playbook...${NC}"
 ansible-playbook -i inventory.ini playbooks/08-kubectl-completion.yml
 
-echo -e "\n${GREEN}✅ kubectl auto-completion setup completed!${NC}"
+echo -e "\n${GREEN}kubectl auto-completion setup completed!${NC}"
 echo "• bash-completion installed"
 echo "• kubectl Tab completion enabled"
 echo "• kubectl alias 'k' configured"

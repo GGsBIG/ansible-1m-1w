@@ -22,12 +22,12 @@ show_step() {
 
 # Function: Display success message
 show_success() {
-    echo -e "\n${GREEN}✅ $1${NC}\n"
+    echo -e "\n${GREEN}$1${NC}\n"
 }
 
 # Function: Display warning message
 show_warning() {
-    echo -e "\n${YELLOW}⚠️  $1${NC}\n"
+    echo -e "\n${YELLOW}$1${NC}\n"
 }
 
 # Function: Display error message
@@ -109,7 +109,7 @@ if ! command -v ansible-playbook &> /dev/null; then
     show_warning "Ansible not installed, installing automatically..."
     install_ansible
 else
-    echo -e "${GREEN}✅ Ansible is already installed${NC}"
+    echo -e "${GREEN}Ansible is already installed${NC}"
     echo -e "${BLUE}Ansible version:${NC}"
     ansible --version | head -1
 fi

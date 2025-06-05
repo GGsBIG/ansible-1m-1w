@@ -17,7 +17,7 @@ NC='\033[0m'
 echo -e "${BLUE}Executing worker kubectl setup playbook...${NC}"
 ansible-playbook -i inventory.ini playbooks/09-worker-kubectl-setup.yml
 
-echo -e "\n${GREEN}✅ Worker node kubectl setup completed!${NC}"
+echo -e "\n${GREEN}Worker node kubectl setup completed!${NC}"
 echo "• kubeconfig copied from Master node"
 echo "• kubectl available on worker node"
 echo "• bash-completion installed"

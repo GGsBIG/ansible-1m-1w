@@ -18,7 +18,7 @@ NC='\033[0m'
 echo -e "${BLUE}Executing Calico installation playbook...${NC}"
 ansible-playbook -i inventory.ini playbooks/07-install-calico.yml
 
-echo -e "\n${GREEN}✅ Calico CNI installation completed!${NC}"
+echo -e "\n${GREEN}Calico CNI installation completed!${NC}"
 echo "• Tigera Operator deployed"
 echo "• Calico CNI installed"
 echo "• Pod CIDR: 10.244.0.0/16"
