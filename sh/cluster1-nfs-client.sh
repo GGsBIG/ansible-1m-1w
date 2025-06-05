@@ -2,8 +2,8 @@
 
 # Cluster 1 NFS Client Setup Script
 # 第一座K8s集群專用的NFS客戶端設置腳本
-# 集群範圍: 10.6.4.213-219 (Masters: 213-215, Workers: 217-219)
-# NFS Server: 10.6.4.220
+# 集群範圍: 從inventory.ini動態讀取
+# NFS Server: 從inventory.ini動態讀取
 
 set -e
 
@@ -14,8 +14,61 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# 配置變數
-NFS_SERVER="10.6.4.220"
+# 函數：從inventory.ini讀取NFS伺服器IP
+get_nfs_server_ip() {
+    local inventory_file="inventory.ini"
+    
+    # 檢查inventory.ini是否存在
+    if [[ ! -f "$inventory_file" ]]; then
+        # 嘗試在上層目錄尋找
+        if [[ -f "../$inventory_file" ]]; then
+            inventory_file="../$inventory_file"
+        elif [[ -f "../../$inventory_file" ]]; then
+            inventory_file="../../$inventory_file"
+        else
+            echo -e "${RED}✗ 找不到inventory.ini文件${NC}"
+            echo -e "${YELLOW}請確保inventory.ini文件存在於當前目錄或上層目錄${NC}"
+            exit 1
+        fi
+    fi
+    
+    # 從[nfs]區段讀取IP
+    local nfs_ip=$(awk '/^\[nfs\]/{flag=1; next} /^\[/{flag=0} flag && /^[0-9]/{print $1; exit}' "$inventory_file")
+    
+    if [[ -z "$nfs_ip" ]]; then
+        echo -e "${RED}✗ 無法從inventory.ini中找到NFS伺服器IP${NC}"
+        echo -e "${YELLOW}請檢查inventory.ini中的[nfs]區段${NC}"
+        exit 1
+    fi
+    
+    echo "$nfs_ip"
+}
+
+# 函數：從inventory.ini讀取集群IP範圍
+get_cluster_info() {
+    local inventory_file="inventory.ini"
+    
+    # 檢查inventory.ini是否存在
+    if [[ ! -f "$inventory_file" ]]; then
+        # 嘗試在上層目錄尋找
+        if [[ -f "../$inventory_file" ]]; then
+            inventory_file="../$inventory_file"
+        elif [[ -f "../../$inventory_file" ]]; then
+            inventory_file="../../$inventory_file"
+        fi
+    fi
+    
+    # 讀取masters和workers的IP範圍
+    local master_ips=$(awk '/^\[masters\]/{flag=1; next} /^\[/{flag=0} flag && /^[0-9]/{print $1}' "$inventory_file" | tr '\n' ' ')
+    local worker_ips=$(awk '/^\[workers\]/{flag=1; next} /^\[/{flag=0} flag && /^[0-9]/{print $1}' "$inventory_file" | tr '\n' ' ')
+    
+    echo "Masters: $master_ips"
+    echo "Workers: $worker_ips"
+}
+
+# 動態讀取配置
+echo -e "${BLUE}正在從inventory.ini讀取配置...${NC}"
+NFS_SERVER=$(get_nfs_server_ip)
 NFS_SHARE_PATH="/srv/nfs/cluster1-data"
 LOCAL_MOUNT_POINT="/mnt/cluster1-nfs"
 CLUSTER_NAME="cluster1"
@@ -23,7 +76,8 @@ CLUSTER_NAME="cluster1"
 echo "=========================================="
 echo "  第一座K8s集群 NFS客戶端設置"
 echo "=========================================="
-echo -e "${BLUE}集群範圍: 10.6.4.213-219${NC}"
+echo -e "${BLUE}集群信息:${NC}"
+get_cluster_info
 echo -e "${BLUE}NFS伺服器: ${NFS_SERVER}${NC}"
 echo -e "${BLUE}共享路徑: ${NFS_SHARE_PATH}${NC}"
 
@@ -66,7 +120,7 @@ else
     echo -e "${YELLOW}嘗試創建共享目錄...${NC}"
     
     # 嘗試在NFS伺服器上創建目錄（如果有SSH訪問權限）
-    if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no gravity@${NFS_SERVER} "sudo mkdir -p ${NFS_SHARE_PATH} && sudo chown nobody:nogroup ${NFS_SHARE_PATH} && sudo chmod 755 ${NFS_SHARE_PATH}" 2>/dev/null; then
+    if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no bbg@${NFS_SERVER} "sudo mkdir -p ${NFS_SHARE_PATH} && sudo chown nobody:nogroup ${NFS_SHARE_PATH} && sudo chmod 755 ${NFS_SHARE_PATH}" 2>/dev/null; then
         echo -e "${GREEN}✓ 在NFS伺服器上創建了共享目錄${NC}"
         
         # 重新嘗試掛載
@@ -152,7 +206,7 @@ echo "NFS伺服器: ${NFS_SERVER}"
 echo "共享路徑: ${NFS_SHARE_PATH}"
 
 echo -e "\n${BLUE}注意事項:${NC}"
-echo "- 此腳本專為第一座K8s集群(10.6.4.213-219)設計"
+echo "- 此腳本會自動從inventory.ini讀取集群配置"
 echo "- NFS共享路徑為: ${NFS_SHARE_PATH}"
 echo "- 與第二座集群的NFS共享完全分離"
 echo "- 確保所有集群節點都執行此腳本" 

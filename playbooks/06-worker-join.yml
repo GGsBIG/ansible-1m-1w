@@ -1,8 +1,6 @@
-#06-worker-join.yml
-
 ---
 - name: Get join command from master node
-  hosts: masters
+  hosts: masters[0]
   become: yes
   tasks:
     - name: Read join command from file
@@ -13,6 +11,21 @@
     - name: Set join command as fact
       set_fact:
         join_command: "{{ join_command_file.content | b64decode | trim }}"
+        cert_key: "{{ hostvars[inventory_hostname]['cert_key'] }}"
+
+- name: Join Additional Master Nodes to Control Plane
+  hosts: masters[1:]
+  become: yes
+  tasks:
+    - name: Join as control plane
+      shell: |
+        {{ hostvars[groups['masters'][0]]['join_command'] }} \
+        --control-plane --certificate-key {{ hostvars[groups['masters'][0]]['cert_key'] }}
+      register: master_join_result
+
+    - name: Display master join result
+      debug:
+        msg: "{{ master_join_result.stdout_lines }}"
 
 - name: Join Worker Nodes to Kubernetes Cluster
   hosts: workers
@@ -27,7 +40,7 @@
         msg: "{{ join_result.stdout_lines }}"
 
 - name: Verify cluster nodes
-  hosts: masters
+  hosts: masters[0]
   become: no
   tasks:
     - name: Get cluster nodes
@@ -40,5 +53,5 @@
         msg: |
           Cluster nodes status:
           {{ nodes_result.stdout_lines | join('\n') }}
-          
-          Note: Nodes may show as 'NotReady' until Pod network is installed. 
+
+          Note: Nodes may show as 'NotReady' until Pod network is installed.
