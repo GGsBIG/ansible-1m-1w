@@ -1,5 +1,21 @@
 ---
-- name: Get join command from master node
+- name: Ensure k8s-lb.example.com is resolvable on all nodes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Set master_lb_ip fact from primary master
+      set_fact:
+        master_lb_ip: "{{ hostvars[groups['masters'][0]].ansible_host | default(hostvars[groups['masters'][0]].ansible_default_ipv4.address) }}"
+      run_once: true
+
+    - name: Add k8s-lb.example.com to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ master_lb_ip }} k8s-lb.example.com"
+        state: present
+        create: yes
+
+- name: Get join command and cert key from primary master
   hosts: masters[0]
   become: yes
   tasks:
@@ -8,43 +24,78 @@
         src: /tmp/kubeadm_join_command.sh
       register: join_command_file
 
-    - name: Set join command as fact
-      set_fact:
-        join_command: "{{ join_command_file.content | b64decode | trim }}"
-        cert_key: "{{ hostvars[inventory_hostname]['cert_key'] }}"
+    - name: Get certificate key
+      shell: kubeadm init phase upload-certs --upload-certs | tail -1
+      register: cert_key_raw
 
-- name: Join Additional Master Nodes to Control Plane
+    - name: Fail if cert_key is empty
+      fail:
+        msg: "Failed to get certificate key from master."
+      when: cert_key_raw.stdout | trim == ''
+
+    - name: Extract and clean join command
+      set_fact:
+        join_command: >-
+          {{ (join_command_file.content | b64decode).splitlines()
+              | select("match", "^kubeadm join")
+              | map("regex_replace", '\\t', ' ')
+              | list | first | trim }}
+        cert_key: "{{ cert_key_raw.stdout | trim }}"
+
+- name: Join additional master nodes to the control plane
   hosts: masters[1:]
   become: yes
   tasks:
-    - name: Join as control plane
+    - name: Reset node before joining (ensure clean state)
       shell: |
-        {{ hostvars[groups['masters'][0]]['join_command'] }} \
-        --control-plane --certificate-key {{ hostvars[groups['masters'][0]]['cert_key'] }}
+        kubeadm reset -f
+        systemctl stop kubelet
+        systemctl stop containerd
+        rm -rf /etc/kubernetes /var/lib/kubelet /var/lib/etcd /var/lib/cni /opt/cni
+        ip link delete cni0 || true
+        ip link delete flannel.1 || true
+        systemctl start containerd
+        systemctl start kubelet
+
+    - name: Join as control plane node
+      shell: >
+        {{ hostvars[groups['masters'][0]].join_command }}
+        --control-plane --certificate-key {{ hostvars[groups['masters'][0]].cert_key }}
       register: master_join_result
 
     - name: Display master join result
       debug:
         msg: "{{ master_join_result.stdout_lines }}"
 
-- name: Join Worker Nodes to Kubernetes Cluster
+- name: Join worker nodes to the Kubernetes cluster
   hosts: workers
   become: yes
   tasks:
+    - name: Reset node before joining (ensure clean state)
+      shell: |
+        kubeadm reset -f
+        systemctl stop kubelet
+        systemctl stop containerd
+        rm -rf /etc/kubernetes /var/lib/kubelet /var/lib/etcd /var/lib/cni /opt/cni
+        ip link delete cni0 || true
+        ip link delete flannel.1 || true
+        systemctl start containerd
+        systemctl start kubelet
+
     - name: Execute kubeadm join command
-      shell: "{{ hostvars[groups['masters'][0]]['join_command'] }}"
+      shell: "{{ hostvars[groups['masters'][0]].join_command }}"
       register: join_result
 
     - name: Display join result
       debug:
         msg: "{{ join_result.stdout_lines }}"
 
-- name: Verify cluster nodes
+- name: Verify all cluster nodes
   hosts: masters[0]
-  become: no
+  become: yes
   tasks:
-    - name: Get cluster nodes
-      shell: kubectl get nodes
+    - name: Wait for all nodes to be registered
+      shell: sleep 10 && kubectl get nodes
       register: nodes_result
       become_user: "{{ ansible_user }}"
 

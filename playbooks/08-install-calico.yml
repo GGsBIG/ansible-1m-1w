@@ -1,12 +1,12 @@
 ---
 - name: Install Calico CNI Plugin
-  hosts: masters
-  become: no
+  hosts: masters[0]
+  become: yes
   tasks:
     - name: Deploy Tigera Operator
-      shell: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml
+      shell: >
+        kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/tigera-operator.yaml --validate=false
       register: tigera_result
-      become_user: "{{ ansible_user }}"
 
     - name: Display Tigera Operator deployment result
       debug:
@@ -27,6 +27,7 @@
     - name: Display modified custom-resources.yaml content
       shell: cat /tmp/custom-resources.yaml
       register: custom_resources_content
+      changed_when: false
 
     - name: Show custom-resources.yaml content
       debug:
@@ -35,24 +36,22 @@
     - name: Apply custom-resources.yaml to deploy Calico
       shell: kubectl apply -f /tmp/custom-resources.yaml
       register: calico_deploy_result
-      become_user: "{{ ansible_user }}"
 
     - name: Display Calico deployment result
       debug:
         msg: "{{ calico_deploy_result.stdout_lines }}"
 
     - name: Wait for Calico pods to be ready (this may take a few minutes)
-      shell: kubectl get pods -n calico-system --no-headers | grep -v Running | wc -l
+      shell: |
+        kubectl get pods -n calico-system --no-headers | grep -v Running | wc -l
       register: pending_pods
       until: pending_pods.stdout | int == 0
       retries: 30
       delay: 10
-      become_user: "{{ ansible_user }}"
 
     - name: Get Calico system pods status
       shell: kubectl get pods -n calico-system
       register: calico_pods_status
-      become_user: "{{ ansible_user }}"
 
     - name: Display Calico pods status
       debug:
@@ -66,20 +65,18 @@
       until: not_ready_nodes.stdout | int == 0
       retries: 20
       delay: 15
-      become_user: "{{ ansible_user }}"
 
     - name: Get final cluster nodes status
       shell: kubectl get nodes -o wide
       register: final_nodes_status
-      become_user: "{{ ansible_user }}"
 
     - name: Display final cluster status
       debug:
         msg: |
           Kubernetes cluster is ready!
-          
+
           Final cluster nodes status:
           {{ final_nodes_status.stdout_lines | join('\n') }}
-          
+
           All nodes should now show as 'Ready' status.
-          Your Kubernetes cluster is fully operational! 
+          Your Kubernetes cluster is fully operational!

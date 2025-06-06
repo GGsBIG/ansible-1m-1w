@@ -32,8 +32,7 @@
 
           backend k8s-masters
               balance roundrobin
-              option httpchk GET /healthz
-              http-check expect status 200
+              option tcp-check
               server master1 10.10.7.2:6443 check
               server master2 10.10.7.3:6443 check
               server master3 10.10.7.4:6443 check
