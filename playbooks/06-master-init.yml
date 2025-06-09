@@ -4,11 +4,10 @@
   become: yes
   tasks:
     - name: Add k8s-lb.example.com to /etc/hosts
-    become: yes
-    lineinfile:
-      path: /etc/hosts
-      line: "{{ hostvars[groups['haproxy'][0]].ansible_host }} k8s-lb.example.com"
-      state: present
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ hostvars[groups['haproxy'][0]].ansible_host }} k8s-lb.example.com"
+        state: present
 
     - name: Initialize Kubernetes cluster with kubeadm
       shell: |
