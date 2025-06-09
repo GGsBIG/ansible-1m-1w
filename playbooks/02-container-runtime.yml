@@ -7,11 +7,12 @@
       apt:
         update_cache: yes
 
-    - name: Install ca-certificates and curl
+    - name: Install required packages
       apt:
         name:
           - ca-certificates
           - curl
+          - gnupg
         state: present
 
     - name: Remove conflicting Docker key and repo (if any)
@@ -31,11 +32,11 @@
         state: directory
         mode: '0755'
 
-    - name: Download Docker GPG key (official path)
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.gpg
-        mode: '0644'
+    - name: Download and convert Docker GPG key to binary
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
 
     - name: Set read permissions for Docker GPG key
       file:
