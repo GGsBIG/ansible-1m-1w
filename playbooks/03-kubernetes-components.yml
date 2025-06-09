@@ -3,25 +3,36 @@
   hosts: all
   become: yes
   tasks:
-    - name: Check if /etc/apt/keyrings directory exists, create if not
-      shell: ls -d /etc/apt/keyrings 2> /dev/null || sudo mkdir -p -m 755 /etc/apt/keyrings
-      changed_when: false
+    - name: Create /etc/apt/keyrings directory if not exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
 
-    - name: Update package cache
-      apt:
-        update_cache: yes
+    - name: Remove old Kubernetes APT list (if exists)
+      file:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        state: absent
 
-    - name: Install required packages for Kubernetes repository
+    - name: Install required packages
       apt:
         name:
-          - apt-transport-https
-          - ca-certificates
           - curl
+          - ca-certificates
           - gpg
         state: present
 
     - name: Download Kubernetes GPG key
-      shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key
+        dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+        mode: '0644'
+
+    - name: Convert Kubernetes GPG key to binary format
+      shell: |
+        gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /etc/apt/keyrings/kubernetes-apt-keyring.asc
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
     - name: Add Kubernetes repository
       lineinfile:
@@ -29,7 +40,7 @@
         line: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /'
         create: yes
 
-    - name: Update package cache after adding Kubernetes repository
+    - name: Update package cache
       apt:
         update_cache: yes
 
@@ -84,4 +95,4 @@
 
     - name: Display kubectl version
       debug:
-        msg: "{{ kubectl_version_check.stdout }}" 
+        msg: "{{ kubectl_version_check.stdout }}"
