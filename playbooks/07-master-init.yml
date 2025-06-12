@@ -3,17 +3,19 @@
   hosts: masters[0]
   become: yes
   tasks:
-    - name: Add k8s-lb.example.com to /etc/hosts
+    - name: Add VIP to /etc/hosts on all nodes
       lineinfile:
         path: /etc/hosts
-        line: "{{ hostvars[groups['haproxy'][0]].ansible_host }} k8s-lb.example.com"
+        line: "10.10.7.17 k8s-vip.local"
         state: present
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['masters'] + groups['workers'] }}"
 
     - name: Initialize Kubernetes cluster with kubeadm
       shell: |
         kubeadm init \
           --apiserver-advertise-address {{ ansible_default_ipv4.address }} \
-          --control-plane-endpoint "k8s-lb.example.com:8443" \
+          --control-plane-endpoint "10.10.7.17:6443" \
           --upload-certs \
           --pod-network-cidr=10.244.0.0/16
       register: kubeadm_init_result
@@ -82,4 +84,5 @@
           Certificate key:
           {{ cert_key_raw.stdout }}
 
+          VIP Address: 10.10.7.17:6443
           The join command has been saved to /tmp/kubeadm_join_command.sh

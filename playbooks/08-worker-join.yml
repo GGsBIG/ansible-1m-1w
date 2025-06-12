@@ -1,17 +1,12 @@
 ---
-- name: Ensure k8s-lb.example.com is resolvable on all nodes
+- name: Ensure VIP is resolvable on all nodes
   hosts: all
   become: yes
   tasks:
-    - name: Set master_lb_ip fact from primary master
-      set_fact:
-        master_lb_ip: "{{ hostvars[groups['masters'][0]].ansible_host | default(hostvars[groups['masters'][0]].ansible_default_ipv4.address) }}"
-      run_once: true
-
-    - name: Add k8s-lb.example.com to /etc/hosts
+    - name: Add VIP to /etc/hosts
       lineinfile:
         path: /etc/hosts
-        line: "{{ master_lb_ip }} k8s-lb.example.com"
+        line: "10.10.7.17 k8s-vip.local"
         state: present
         create: yes
 
