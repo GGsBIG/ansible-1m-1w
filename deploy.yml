@@ -3,9 +3,11 @@
 - import_playbook: playbooks/02-container-runtime.yml
 - import_playbook: playbooks/03-kubernetes-components.yml
 - import_playbook: playbooks/04-system-config.yml
-- import_playbook: playbooks/05-setup-haproxy.yml
-- import_playbook: playbooks/06-master-init.yml
-- import_playbook: playbooks/07-worker-join.yml
-- import_playbook: playbooks/08-install-calico.yml
-- import_playbook: playbooks/09-kubectl-completion.yml
-- import_playbook: playbooks/10-worker-kubectl-setup.yml 
+- import_playbook: playbooks/05-setup-keepalived.yml
+- import_playbook: playbooks/06-setup-haproxy.yml
+- import_playbook: playbooks/07-master-init.yml
+- import_playbook: playbooks/08-worker-join.yml
+- import_playbook: playbooks/09-install-calico.yml
+- import_playbook: playbooks/10-kubectl-completion.yml
+- import_playbook: playbooks/11-worker-kubectl-setup.yml
+- import_playbook: playbooks/12-copy-kubeconfig.yml
