@@ -39,27 +39,53 @@
 #### 更新系統並安裝必要套件
 ```bash
 # 在所有節點執行
-sudo dnf update -y
-sudo dnf install -y wget curl net-tools bind-utils yum-utils \
-    device-mapper-persistent-data lvm2 git vim htop
+sudo dnf update -y && sudo dnf install -y wget curl net-tools bind-utils yum-utils device-mapper-persistent-data lvm2 git vim htop
 ```
 
 #### 設定主機名稱和網路
 ```bash
-# Master 節點
-sudo hostnamectl set-hostname H10LDMP10  # 在192.168.39.60執行
-sudo hostnamectl set-hostname H10LDMP11  # 在192.168.39.61執行
-sudo hostnamectl set-hostname H10LDMP12  # 在192.168.39.62執行
+# 在192.168.39.60執行
+sudo hostnamectl set-hostname H10LDMP10
+```
 
-# Worker 節點
-sudo hostnamectl set-hostname H10LDMP13  # 在192.168.39.63執行
-sudo hostnamectl set-hostname H10LDMP14  # 在192.168.39.64執行
-sudo hostnamectl set-hostname H10LDMP15  # 在192.168.39.65執行
+```bash
+# 在192.168.39.61執行
+sudo hostnamectl set-hostname H10LDMP11
+```
 
-# 支援節點
-sudo hostnamectl set-hostname H10LDMP16  # 在192.168.39.66執行
-sudo hostnamectl set-hostname H10LDMP17  # 在192.168.39.67執行
-sudo hostnamectl set-hostname H10LDMP18  # 在192.168.39.68執行
+```bash
+# 在192.168.39.62執行
+sudo hostnamectl set-hostname H10LDMP12
+```
+
+```bash
+# 在192.168.39.63執行
+sudo hostnamectl set-hostname H10LDMP13
+```
+
+```bash
+# 在192.168.39.64執行
+sudo hostnamectl set-hostname H10LDMP14
+```
+
+```bash
+# 在192.168.39.65執行
+sudo hostnamectl set-hostname H10LDMP15
+```
+
+```bash
+# 在192.168.39.66執行
+sudo hostnamectl set-hostname H10LDMP16
+```
+
+```bash
+# 在192.168.39.67執行
+sudo hostnamectl set-hostname H10LDMP17
+```
+
+```bash
+# 在192.168.39.68執行
+sudo hostnamectl set-hostname H10LDMP18
 ```
 
 #### 配置hosts檔案
@@ -83,12 +109,7 @@ EOF
 #### 在Bastion節點生成SSH金鑰
 ```bash
 # 在H10LDMP16 (Bastion)執行
-ssh-keygen -t rsa -b 4096 -C "installadm@bastion" -f ~/.ssh/id_rsa -N ""
-
-# 複製公鑰到所有節點
-for host in {60..68}; do
-    ssh-copy-id installadm@192.168.39.$host
-done
+ssh-keygen -t rsa -b 4096 -C "installadm@bastion" -f ~/.ssh/id_rsa -N "" && for host in {60..68}; do ssh-copy-id installadm@192.168.39.$host; done
 ```
 
 ### 1.3 防火牆和SELinux設定
@@ -96,28 +117,18 @@ done
 #### 配置防火牆規則
 ```bash
 # Master 節點防火牆設定
-sudo firewall-cmd --permanent --add-port=6443/tcp    # Kubernetes API server
-sudo firewall-cmd --permanent --add-port=2379-2380/tcp  # etcd server client API
-sudo firewall-cmd --permanent --add-port=10250/tcp   # Kubelet API
-sudo firewall-cmd --permanent --add-port=10251/tcp   # kube-scheduler
-sudo firewall-cmd --permanent --add-port=10252/tcp   # kube-controller-manager
-sudo firewall-cmd --permanent --add-port=10255/tcp   # Read-only Kubelet API
+sudo firewall-cmd --permanent --add-port=6443/tcp --add-port=2379-2380/tcp --add-port=10250/tcp --add-port=10251/tcp --add-port=10252/tcp --add-port=10255/tcp --add-port=8472/udp --add-masquerade && sudo firewall-cmd --reload
+```
 
+```bash
 # Worker 節點防火牆設定
-sudo firewall-cmd --permanent --add-port=10250/tcp   # Kubelet API
-sudo firewall-cmd --permanent --add-port=30000-32767/tcp  # NodePort Services
-
-# 所有節點通用設定
-sudo firewall-cmd --permanent --add-port=8472/udp    # Flannel VXLAN
-sudo firewall-cmd --permanent --add-masquerade
-sudo firewall-cmd --reload
+sudo firewall-cmd --permanent --add-port=10250/tcp --add-port=30000-32767/tcp --add-port=8472/udp --add-masquerade && sudo firewall-cmd --reload
 ```
 
 #### SELinux設定
 ```bash
 # 設定SELinux為permissive模式
-sudo setenforce 0
-sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+sudo setenforce 0 && sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 ```
 
 ### 1.4 核心參數調整
@@ -129,9 +140,7 @@ sudo tee /etc/modules-load.d/k8s.conf << EOF
 overlay
 br_netfilter
 EOF
-
-sudo modprobe overlay
-sudo modprobe br_netfilter
+sudo modprobe overlay && sudo modprobe br_netfilter
 ```
 
 #### 設定sysctl參數
@@ -142,15 +151,13 @@ net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward                 = 1
 EOF
-
 sudo sysctl --system
 ```
 
 #### 禁用swap
 ```bash
 # 在所有節點執行
-sudo swapoff -a
-sudo sed -i '/swap/d' /etc/fstab
+sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
 ```
 
 ---
@@ -168,30 +175,19 @@ sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/dock
 #### 安裝containerd
 ```bash
 # 在所有節點執行
-sudo dnf install -y containerd.io
-
-# 生成預設配置
-sudo mkdir -p /etc/containerd
-sudo containerd config default | sudo tee /etc/containerd/config.toml
+sudo dnf install -y containerd.io && sudo mkdir -p /etc/containerd && sudo containerd config default | sudo tee /etc/containerd/config.toml
 ```
 
 #### 配置containerd使用systemd cgroup driver
 ```bash
 # 在所有節點執行
-sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-
-# 重啟containerd服務
-sudo systemctl restart containerd
-sudo systemctl enable containerd
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml && sudo systemctl restart containerd && sudo systemctl enable containerd
 ```
 
 ### 2.2 驗證containerd安裝
 ```bash
-# 檢查containerd狀態
-sudo systemctl status containerd
-
-# 測試containerd
-sudo ctr version
+# 檢查containerd狀態和版本
+sudo systemctl status containerd && sudo ctr version
 ```
 
 ---
@@ -217,10 +213,7 @@ EOF
 
 ```bash
 # 在所有節點執行
-sudo dnf install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
-
-# 啟用kubelet服務
-sudo systemctl enable kubelet
+sudo dnf install -y kubelet kubeadm kubectl --disableexcludes=kubernetes && sudo systemctl enable kubelet
 ```
 
 ### 3.3 配置kubelet
@@ -240,18 +233,7 @@ EOF
 
 ```bash
 # 在H10LDMP10執行
-sudo kubeadm init \
-  --apiserver-advertise-address=192.168.39.60 \
-  --control-plane-endpoint=192.168.39.60:6443 \
-  --pod-network-cidr=10.244.0.0/16 \
-  --service-cidr=10.96.0.0/16 \
-  --upload-certs \
-  --v=5
-
-# 設定kubectl for installadm用戶
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+sudo kubeadm init --apiserver-advertise-address=192.168.39.60 --control-plane-endpoint=192.168.39.60:6443 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/16 --upload-certs --v=5 && mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
 **重要：保存輸出的join命令！**
@@ -268,14 +250,8 @@ kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/
 ### 4.3 驗證第一個Master節點
 
 ```bash
-# 檢查節點狀態
-kubectl get nodes
-
-# 檢查Pod狀態
-kubectl get pods -n kube-system
-
-# 檢查叢集資訊
-kubectl cluster-info
+# 檢查節點和叢集狀態
+kubectl get nodes && kubectl get pods -n kube-system && kubectl cluster-info
 ```
 
 ---
@@ -285,41 +261,22 @@ kubectl cluster-info
 ### 5.1 加入第二個Master節點 (H10LDMP11)
 
 ```bash
-# 使用第一個Master初始化時輸出的join命令
-# 格式如下（使用實際輸出的命令）：
-sudo kubeadm join 192.168.39.60:6443 --token <token> \
-    --discovery-token-ca-cert-hash sha256:<hash> \
-    --control-plane --certificate-key <certificate-key>
-
-# 設定kubectl
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+# 使用第一個Master初始化時輸出的join命令（請替換為實際的token和hash）
+sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash> --control-plane --certificate-key <certificate-key> && mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
 ### 5.2 加入第三個Master節點 (H10LDMP12)
 
 ```bash
-# 重複上述步驟
-sudo kubeadm join 192.168.39.60:6443 --token <token> \
-    --discovery-token-ca-cert-hash sha256:<hash> \
-    --control-plane --certificate-key <certificate-key>
-
-# 設定kubectl
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+# 使用相同的join命令（請替換為實際的token和hash）
+sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash> --control-plane --certificate-key <certificate-key> && mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
 ### 5.3 驗證HA Master設定
 
 ```bash
 # 在任一Master節點檢查
-kubectl get nodes
-kubectl get pods -n kube-system -o wide
-
-# 檢查etcd狀態
-kubectl get pods -n kube-system | grep etcd
+kubectl get nodes && kubectl get pods -n kube-system -o wide && kubectl get pods -n kube-system | grep etcd
 ```
 
 ---
@@ -331,28 +288,25 @@ kubectl get pods -n kube-system | grep etcd
 在每個Worker節點執行join命令：
 
 ```bash
-# H10LDMP13 (Worker 1)
-sudo kubeadm join 192.168.39.60:6443 --token <token> \
-    --discovery-token-ca-cert-hash sha256:<hash>
+# H10LDMP13 (Worker 1) - 請替換為實際的token和hash
+sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+```
 
-# H10LDMP14 (Worker 2)  
-sudo kubeadm join 192.168.39.60:6443 --token <token> \
-    --discovery-token-ca-cert-hash sha256:<hash>
+```bash
+# H10LDMP14 (Worker 2) - 請替換為實際的token和hash
+sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+```
 
-# H10LDMP15 (Worker 3)
-sudo kubeadm join 192.168.39.60:6443 --token <token> \
-    --discovery-token-ca-cert-hash sha256:<hash>
+```bash
+# H10LDMP15 (Worker 3) - 請替換為實際的token和hash
+sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
 ### 6.2 驗證Worker節點
 
 ```bash
 # 在Master節點檢查
-kubectl get nodes
-kubectl get nodes -o wide
-
-# 檢查所有節點狀態
-kubectl describe nodes
+kubectl get nodes && kubectl get nodes -o wide && kubectl describe nodes
 ```
 
 ---
@@ -363,39 +317,17 @@ kubectl describe nodes
 
 ```bash
 # 在H10LDMP17 (NFS Server)執行
-sudo dnf install -y nfs-utils
-
-# 創建共享目錄
-sudo mkdir -p /nfs/k8s-storage
-sudo chmod 777 /nfs/k8s-storage
-
-# 配置NFS exports
-sudo tee /etc/exports << EOF
+sudo dnf install -y nfs-utils && sudo mkdir -p /nfs/k8s-storage && sudo chmod 777 /nfs/k8s-storage && sudo tee /etc/exports << EOF
 /nfs/k8s-storage 192.168.39.0/24(rw,sync,no_root_squash,no_subtree_check)
 EOF
-
-# 啟動NFS服務
-sudo systemctl enable nfs-server
-sudo systemctl start nfs-server
-sudo exportfs -ra
-
-# 配置防火牆
-sudo firewall-cmd --permanent --add-service=nfs
-sudo firewall-cmd --permanent --add-service=rpc-bind
-sudo firewall-cmd --permanent --add-service=mountd
-sudo firewall-cmd --reload
+sudo systemctl enable nfs-server && sudo systemctl start nfs-server && sudo exportfs -ra && sudo firewall-cmd --permanent --add-service=nfs --add-service=rpc-bind --add-service=mountd && sudo firewall-cmd --reload
 ```
 
 ### 7.2 在所有K8s節點安裝NFS客戶端
 
 ```bash
 # 在所有Master和Worker節點執行
-sudo dnf install -y nfs-utils
-
-# 測試NFS掛載
-sudo mkdir -p /mnt/nfs-test
-sudo mount -t nfs 192.168.39.67:/nfs/k8s-storage /mnt/nfs-test
-sudo umount /mnt/nfs-test
+sudo dnf install -y nfs-utils && sudo mkdir -p /mnt/nfs-test && sudo mount -t nfs 192.168.39.67:/nfs/k8s-storage /mnt/nfs-test && sudo umount /mnt/nfs-test
 ```
 
 ### 7.3 安裝Helm和部署NFS Provisioner
@@ -403,34 +335,13 @@ sudo umount /mnt/nfs-test
 #### 安裝Helm
 ```bash
 # 在Master節點執行
-# 下載和安裝Helm
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-# 驗證Helm安裝
-helm version
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && helm version
 ```
 
 #### 使用Helm部署NFS Subdir External Provisioner
 ```bash
-# 添加NFS Subdir External Provisioner Helm Repository
-helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
-helm repo update
-
-# 創建專用namespace
-kubectl create namespace nfs-provisioner
-
-# 使用Helm安裝NFS Provisioner
-helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
-  --namespace nfs-provisioner \
-  --set nfs.server=192.168.39.67 \
-  --set nfs.path=/nfs/k8s-storage \
-  --set storageClass.name=nfs-client \
-  --set storageClass.defaultClass=false \
-  --set storageClass.archiveOnDelete=false
-
-# 驗證部署
-kubectl get pods -n nfs-provisioner
-kubectl get storageclass
+# 部署NFS Provisioner
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/ && helm repo update && kubectl create namespace nfs-provisioner && helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace nfs-provisioner --set nfs.server=192.168.39.67 --set nfs.path=/nfs/k8s-storage --set storageClass.name=nfs-client --set storageClass.defaultClass=false --set storageClass.archiveOnDelete=false && kubectl get pods -n nfs-provisioner && kubectl get storageclass
 ```
 
 #### 設定NFS StorageClass為預設(可選)
@@ -447,31 +358,20 @@ kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storagec
 
 ```bash
 # 在H10LDMP18執行
-sudo dnf install -y docker-ce docker-ce-cli containerd.io
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker installadm
-
-# 安裝Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+sudo dnf install -y docker-ce docker-ce-cli containerd.io && sudo systemctl start docker && sudo systemctl enable docker && sudo usermod -aG docker installadm && sudo curl -L "https://github.com/docker/compose/releases/download/2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
 ```
 
 ### 8.2 安裝Harbor
 
 ```bash
-# 下載Harbor
-cd /opt
-sudo wget https://github.com/goharbor/harbor/releases/download/v2.8.0/harbor-offline-installer-v2.8.0.tgz
-sudo tar xvf harbor-offline-installer-v2.8.0.tgz
-sudo chown -R installadm:installadm harbor
+# 下載和配置Harbor
+cd /opt && sudo wget https://github.com/goharbor/harbor/releases/download/v2.8.0/harbor-offline-installer-v2.8.0.tgz && sudo tar xvf harbor-offline-installer-v2.8.0.tgz && sudo chown -R installadm:installadm harbor && cd harbor && cp harbor.yml.tmpl harbor.yml
+```
 
-# 配置Harbor
-cd harbor
-cp harbor.yml.tmpl harbor.yml
-
-# 編輯harbor.yml
-sudo vim harbor.yml
+**編輯harbor.yml檔案：**
+```bash
+# 使用vim或nano編輯器修改以下設定
+vim harbor.yml
 ```
 
 **Harbor配置要點：**
@@ -523,29 +423,21 @@ _version: 2.8.0
 ### 8.3 啟動Harbor
 
 ```bash
-# 執行安裝腳本
-sudo ./install.sh
-
-# 檢查Harbor狀態
-docker-compose ps
+# 執行安裝腳本並檢查狀態
+sudo ./install.sh && docker-compose ps
 ```
 
 ### 8.4 在所有K8s節點配置Harbor
 
 ```bash
 # 在所有Master和Worker節點執行
-# 配置containerd以信任Harbor私有倉庫
-sudo mkdir -p /etc/containerd/certs.d/192.168.39.68
-
-sudo tee /etc/containerd/certs.d/192.168.39.68/hosts.toml << EOF
+sudo mkdir -p /etc/containerd/certs.d/192.168.39.68 && sudo tee /etc/containerd/certs.d/192.168.39.68/hosts.toml << EOF
 server = "http://192.168.39.68"
 
 [host."http://192.168.39.68"]
   capabilities = ["pull", "resolve", "push"]
   skip_verify = true
 EOF
-
-# 重啟containerd
 sudo systemctl restart containerd
 ```
 
@@ -556,17 +448,8 @@ sudo systemctl restart containerd
 ### 基本功能驗證
 
 ```bash
-# 檢查所有節點狀態
-kubectl get nodes -o wide
-
-# 檢查系統Pod
-kubectl get pods -n kube-system
-
-# 檢查叢集資訊
-kubectl cluster-info
-
-# 檢查StorageClass
-kubectl get storageclass
+# 檢查叢集完整狀態
+kubectl get nodes -o wide && kubectl get pods -n kube-system && kubectl cluster-info && kubectl get storageclass
 ```
 
 ---
@@ -585,33 +468,20 @@ kubectl get storageclass
 
 #### 節點維護
 ```bash
-# 標記節點為不可調度
-kubectl cordon <node-name>
-
-# 驅逐節點上的Pod
-kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
-
-# 恢復節點為可調度
-kubectl uncordon <node-name>
+# 節點維護流程（請替換<node-name>）
+kubectl cordon <node-name> && kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data && kubectl uncordon <node-name>
 ```
 
 #### 叢集備份
 ```bash
 # 備份etcd
-sudo ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-snapshot-$(date +%Y%m%d).db \
-  --endpoints=https://127.0.0.1:2379 \
-  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-  --cert=/etc/kubernetes/pki/etcd/server.crt \
-  --key=/etc/kubernetes/pki/etcd/server.key
+sudo ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-snapshot-$(date +%Y%m%d).db --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key
 ```
 
 #### 證書更新
 ```bash
-# 檢查證書到期時間
-kubeadm certs check-expiration
-
-# 更新所有證書
-sudo kubeadm certs renew all
+# 檢查和更新證書
+kubeadm certs check-expiration && sudo kubeadm certs renew all
 ```
 
 ### 重要提醒
