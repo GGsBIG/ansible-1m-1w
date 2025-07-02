@@ -7,28 +7,18 @@
 - **密碼**：FfAaJjDd@05*26
 - **權限**：具有sudo權限
 
-### 叢集架構 (共9台VM)
+### 叢集架構 (共8台VM)
 
-#### Master Nodes (3台 - HA Control Plane)
-| 主機名 | IP地址 | 作業系統 | 規格 | 角色 |
-|--------|--------|----------|------|------|
-| H10LDMP10 | 192.168.39.60 | RHEL 8.10 | 8C/16GB/100GB | Master 1 |
-| H10LDMP11 | 192.168.39.61 | RHEL 8.10 | 8C/16GB/100GB | Master 2 |
-| H10LDMP12 | 192.168.39.62 | RHEL 8.10 | 8C/16GB/100GB | Master 3 |
-
-#### Worker Nodes (3台)
-| 主機名 | IP地址 | 作業系統 | 規格 | 角色 |
-|--------|--------|----------|------|------|
-| H10LDMP13 | 192.168.39.63 | RHEL 8.10 | 16C/32GB/200GB | Worker 1 |
-| H10LDMP14 | 192.168.39.64 | RHEL 8.10 | 16C/32GB/200GB | Worker 2 |
-| H10LDMP15 | 192.168.39.65 | RHEL 8.10 | 16C/32GB/200GB | Worker 3 |
-
-#### 支援服務節點 (3台)
-| 主機名 | IP地址 | 作業系統 | 規格 | 角色 |
-|--------|--------|----------|------|------|
-| H10LDMP16 | 192.168.39.66 | RHEL 8.10 | 4C/16GB/80GB | Bastion |
-| H10LDMP17 | 192.168.39.67 | RHEL 8.10 | 4C/16GB/500GB | NFS Server |
-| H10LDMP18 | 192.168.39.68 | RHEL 8.10 | 4C/16GB/500GB | Harbor Registry |
+| 節點名 | IP | 角色 | 規格 |
+|-------|-----|------|------|
+| master-01 | 192.168.39.60 | Master | 8C/16GB |
+| master-02 | 192.168.39.61 | Master | 8C/16GB |
+| master-03 | 192.168.39.62 | Master | 8C/16GB |
+| worker-01 | 192.168.39.63 | Worker | 16C/32GB |
+| worker-02 | 192.168.39.64 | Worker | 16C/32GB |
+| worker-03 | 192.168.39.65 | Worker | 16C/32GB |
+| nfs | 192.168.39.67 | Storage | 4C/16GB |
+| harbor | 192.168.39.68 | Registry | 4C/16GB |
 
 ---
 
@@ -45,71 +35,67 @@ sudo dnf update -y && sudo dnf install -y wget curl net-tools bind-utils yum-uti
 #### 設定主機名稱和網路
 ```bash
 # 在192.168.39.60執行
-sudo hostnamectl set-hostname H10LDMP10
+sudo hostnamectl set-hostname master-01
 ```
 
 ```bash
 # 在192.168.39.61執行
-sudo hostnamectl set-hostname H10LDMP11
+sudo hostnamectl set-hostname master-02
 ```
 
 ```bash
 # 在192.168.39.62執行
-sudo hostnamectl set-hostname H10LDMP12
+sudo hostnamectl set-hostname master-03
 ```
 
 ```bash
 # 在192.168.39.63執行
-sudo hostnamectl set-hostname H10LDMP13
+sudo hostnamectl set-hostname worker-01
 ```
 
 ```bash
 # 在192.168.39.64執行
-sudo hostnamectl set-hostname H10LDMP14
+sudo hostnamectl set-hostname worker-02
 ```
 
 ```bash
 # 在192.168.39.65執行
-sudo hostnamectl set-hostname H10LDMP15
-```
-
-```bash
-# 在192.168.39.66執行
-sudo hostnamectl set-hostname H10LDMP16
+sudo hostnamectl set-hostname worker-03
 ```
 
 ```bash
 # 在192.168.39.67執行
-sudo hostnamectl set-hostname H10LDMP17
+sudo hostnamectl set-hostname nfs
 ```
 
 ```bash
 # 在192.168.39.68執行
-sudo hostnamectl set-hostname H10LDMP18
+sudo hostnamectl set-hostname harbor
 ```
 
 #### 配置hosts檔案
 ```bash
 # 在所有節點執行
 sudo tee -a /etc/hosts << EOF
-192.168.39.60  H10LDMP10  master1
-192.168.39.61  H10LDMP11  master2
-192.168.39.62  H10LDMP12  master3
-192.168.39.63  H10LDMP13  worker1
-192.168.39.64  H10LDMP14  worker2
-192.168.39.65  H10LDMP15  worker3
-192.168.39.66  H10LDMP16  bastion
-192.168.39.67  H10LDMP17  nfs
-192.168.39.68  H10LDMP18  harbor
+192.168.39.60  master-01
+192.168.39.61  master-02
+192.168.39.62  master-03
+192.168.39.63  worker-01
+192.168.39.64  worker-02
+192.168.39.65  worker-03
+192.168.39.67  nfs
+192.168.39.68  harbor
 EOF
 ```
 
-### 1.2 SSH金鑰配置
+### 1.2 SSH金鑰配置 (可選)
 
-#### 在Bastion節點生成SSH金鑰
+#### 在master-01節點生成SSH金鑰
 ```bash
-# 在H10LDMP16 (Bastion)執行
-ssh-keygen -t rsa -b 4096 -C "installadm@bastion" -f ~/.ssh/id_rsa -N "" && for host in {60..68}; do ssh-copy-id installadm@192.168.39.$host; done
+# 在master-01執行 (可選，用於管理其他節點)
+ssh-keygen -t rsa -b 4096 -C "installadm@master-01" -f ~/.ssh/id_rsa -N ""
+# 手動複製公鑰到其他節點
+for ip in 192.168.39.61 192.168.39.62 192.168.39.63 192.168.39.64 192.168.39.65 192.168.39.67 192.168.39.68; do ssh-copy-id installadm@$ip; done
 ```
 
 ### 1.3 防火牆和SELinux設定
@@ -128,6 +114,7 @@ sudo firewall-cmd --permanent --add-port=10250/tcp --add-port=30000-32767/tcp --
 #### SELinux設定
 ```bash
 # 設定SELinux為permissive模式
+sudo setenforce 0 && sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 sudo setenforce 0 && sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 ```
 
@@ -232,7 +219,7 @@ EOF
 ### 4.1 初始化第一個Master節點
 
 ```bash
-# 在H10LDMP10執行
+# 在master-01執行
 sudo kubeadm init --apiserver-advertise-address=192.168.39.60 --control-plane-endpoint=192.168.39.60:6443 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/16 --upload-certs --v=5 && mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
@@ -243,7 +230,7 @@ sudo kubeadm init --apiserver-advertise-address=192.168.39.60 --control-plane-en
 ### 4.2 安裝Pod網路附加元件 (Flannel)
 
 ```bash
-# 在H10LDMP10執行
+# 在master-01執行
 kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 ```
 
@@ -258,14 +245,14 @@ kubectl get nodes && kubectl get pods -n kube-system && kubectl cluster-info
 
 ## 階段五：添加額外Master節點 (HA設定)
 
-### 5.1 加入第二個Master節點 (H10LDMP11)
+### 5.1 加入第二個Master節點 (master-02)
 
 ```bash
 # 使用第一個Master初始化時輸出的join命令（請替換為實際的token和hash）
 sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash> --control-plane --certificate-key <certificate-key> && mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-### 5.2 加入第三個Master節點 (H10LDMP12)
+### 5.2 加入第三個Master節點 (master-03)
 
 ```bash
 # 使用相同的join命令（請替換為實際的token和hash）
@@ -288,17 +275,17 @@ kubectl get nodes && kubectl get pods -n kube-system -o wide && kubectl get pods
 在每個Worker節點執行join命令：
 
 ```bash
-# H10LDMP13 (Worker 1) - 請替換為實際的token和hash
+# worker-01 (192.168.39.63) - 請替換為實際的token和hash
 sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
 ```bash
-# H10LDMP14 (Worker 2) - 請替換為實際的token和hash
+# worker-02 (192.168.39.64) - 請替換為實際的token和hash
 sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
 ```bash
-# H10LDMP15 (Worker 3) - 請替換為實際的token和hash
+# worker-03 (192.168.39.65) - 請替換為實際的token和hash
 sudo kubeadm join 192.168.39.60:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
 ```
 
@@ -311,12 +298,12 @@ kubectl get nodes && kubectl get nodes -o wide && kubectl describe nodes
 
 ---
 
-## 階段七：配置NFS共享儲存 (H10LDMP17)
+## 階段七：配置NFS共享儲存 (nfs)
 
 ### 7.1 安裝和配置NFS Server
 
 ```bash
-# 在H10LDMP17 (NFS Server)執行
+# 在nfs (192.168.39.67)執行
 sudo dnf install -y nfs-utils && sudo mkdir -p /nfs/k8s-storage && sudo chmod 777 /nfs/k8s-storage && sudo tee /etc/exports << EOF
 /nfs/k8s-storage 192.168.39.0/24(rw,sync,no_root_squash,no_subtree_check)
 EOF
@@ -352,12 +339,12 @@ kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storagec
 
 ---
 
-## 階段八：配置Harbor私有鏡像倉庫 (H10LDMP18)
+## 階段八：配置Harbor私有鏡像倉庫 (harbor)
 
 ### 8.1 安裝Docker和Docker Compose
 
 ```bash
-# 在H10LDMP18執行
+# 在harbor (192.168.39.68)執行
 sudo dnf install -y docker-ce docker-ce-cli containerd.io && sudo systemctl start docker && sudo systemctl enable docker && sudo usermod -aG docker installadm && sudo curl -L "https://github.com/docker/compose/releases/download/2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
 ```
 
